@@ -11,55 +11,7 @@
 #include <cassert>
 #include <AdePT/Atomic.h>
 
-// Example data structure containing several atomics
-struct SomeStruct {
-  adept::Atomic_t<int> var_int;
-  adept::Atomic_t<float> var_float;
-
-  __host__ __device__
-  SomeStruct() {}
-
-  __host__ __device__
-  static SomeStruct *MakeInstanceAt(void *addr)
-  {
-    SomeStruct *obj = new (addr) SomeStruct();
-    return obj;
-  }
-};
-
-// Kernel function to perform atomic addition
-__global__ void testAdd(SomeStruct *s)
-{
-  // Test fetch_add, fetch_sub
-  s->var_int.fetch_add(1);
-  s->var_float.fetch_add(1);
-}
-
-// Kernel function to perform atomic subtraction
-__global__ void testSub(SomeStruct *s)
-{
-  // Test fetch_add, fetch_sub
-  s->var_int.fetch_sub(1);
-  s->var_float.fetch_sub(1);
-}
-
-// Kernel function to test compare_exchange
-__global__ void testCompareExchange(SomeStruct *s)
-{
-  // Read the content of the atomic
-  auto expected = s->var_int.load();
-  bool success  = false;
-  while (!success) {
-    // Try to decrement the content, if zero try to replace it with 100
-    while (expected > 0) {
-      success = s->var_int.compare_exchange_strong(expected, expected - 1);
-      if (success) return;
-    }
-    while (expected == 0) {
-      success = s->var_int.compare_exchange_strong(expected, 100);
-    }
-  }
-}
+#include "test_atomic.h"
 
 ///______________________________________________________________________________________
 int main(void)
@@ -71,7 +23,7 @@ int main(void)
 
   // Allocate the content of SomeStruct in a buffer
   char *buffer = nullptr;
-  cudaMallocManaged(&buffer, sizeof(SomeStruct));
+  cudaMallocManaged((void**)&buffer, sizeof(SomeStruct));
   SomeStruct *a = SomeStruct::MakeInstanceAt(buffer);
 
   // Launch a kernel doing additions
@@ -79,7 +31,8 @@ int main(void)
   std::cout << "   testAdd ... ";
   // Wait memory to reach device
   cudaDeviceSynchronize();
-  testAdd<<<nblocks, nthreads>>>(a);
+  #pragma omp parallel for collapse(2)
+  COPCORE_KERNEL(nblocks.x, nthreads.x, testAdd, a);
   // Wait all warps to finish and sync memory
   cudaDeviceSynchronize();
 
@@ -94,7 +47,8 @@ int main(void)
   a->var_int.store(nblocks.x * nthreads.x);
   a->var_float.store(nblocks.x * nthreads.x);
   cudaDeviceSynchronize();
-  testSub<<<nblocks, nthreads>>>(a);
+  #pragma omp parallel for collapse(2)
+  COPCORE_KERNEL(nblocks.x, nthreads.x, testSub, a);
   cudaDeviceSynchronize();
 
   testOK &= a->var_int.load() == 0;
@@ -106,7 +60,8 @@ int main(void)
   std::cout << "   testCAS ... ";
   a->var_int.store(99);
   cudaDeviceSynchronize();
-  testCompareExchange<<<nblocks, nthreads>>>(a);
+  #pragma omp parallel for collapse(2)
+  COPCORE_KERNEL(nblocks.x, nthreads.x, testCompareExchange, a);
   cudaDeviceSynchronize();
   testOK = a->var_int.load() == 99;
   std::cout << result[testOK] << "\n";

@@ -98,6 +98,7 @@ constexpr BlockDimensions blockDim{1, 1, 1};
 constexpr ThreadIndices threadIdx{0, 0, 0};
 
 cudaError_t cudaMalloc(void **devPtr, size_t size);
+cudaError_t cudaMallocManaged(void **devPtr, size_t size);
 cudaError_t cudaMallocHost(void **ptr, size_t size);
 cudaError_t cudaMemcpy(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind);
 cudaError_t cudaMemcpyAsync(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind, cudaStream_t stream);
@@ -110,12 +111,23 @@ cudaError_t cudaEventSynchronize(cudaEvent_t event);
 cudaError_t cudaEventRecord(cudaEvent_t event, cudaStream_t stream);
 cudaError_t cudaFreeHost(void *ptr);
 cudaError_t cudaFree(void *ptr);
+cudaError_t cudaDeviceSynchronize();
 cudaError_t cudaDeviceReset();
 cudaError_t cudaStreamCreate(cudaStream_t *pStream);
 cudaError_t cudaMemcpyToSymbol(void *symbol, const void *src, size_t count, size_t offset = 0,
                                enum cudaMemcpyKind kind = cudaMemcpyDefault);
 cudaError_t cudaHostUnregister(void *ptr);
 cudaError_t cudaHostRegister(void *ptr, size_t size, unsigned int flags);
+
+/**
+ * CUDA kernel launch macro for CPU
+ */
+#define COPCORE_KERNEL(GRID, THREADS, FUNC, ...) \
+  for (auto _b = 0; _b < GRID; ++_b) {  \
+    for (auto _t = 0; _t < THREADS; ++_t) {  \
+      FUNC(__VA_ARGS__);               \
+    } \
+  }
 
 // CUDA accepts more bindings to cudaMemcpyTo/FromSymbol
 template <class T>

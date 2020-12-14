@@ -46,4 +46,10 @@ inline const char *cudaGetErrorString(cudaError_t error)
     }                                                                                                         \
   }
 
+/**
+ * CUDA kernel launch abstraction macro
+ */
+#define COPCORE_KERNEL(BLOCKS, THREADS, FUNC, ...) \
+  FUNC<<<BLOCKS,THREADS>>>(__VA_ARGS__)
+
 #endif

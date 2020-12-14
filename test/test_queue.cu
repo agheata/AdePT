@@ -42,11 +42,11 @@ int main(void)
   int capacity      = 1 << 15; // 32768 - accomodates values pushed by all threads
   size_t buffersize = Queue_t::SizeOfInstance(capacity);
   char *buffer      = nullptr;
-  cudaMallocManaged(&buffer, buffersize);
+  cudaMallocManaged((void**)&buffer, buffersize);
   auto queue = Queue_t::MakeInstanceAt(capacity, buffer);
 
   char *buffer_atomic = nullptr;
-  cudaMallocManaged(&buffer_atomic, sizeof(AtomicLong_t));
+  cudaMallocManaged((void**)&buffer_atomic, sizeof(AtomicLong_t));
   auto sum = new (buffer_atomic) AtomicLong_t;
 
   bool testOK = true;
@@ -54,13 +54,13 @@ int main(void)
   // Allow memory to reach the device
   cudaDeviceSynchronize();
   // Launch a kernel queueing thread id's
-  pushData<<<nblocks, nthreads>>>(queue);
+  COPCORE_KERNEL(nblocks.x, nthreads.x, pushData, queue);
   // Allow all warps in the stream to finish
   cudaDeviceSynchronize();
   // Make sure all threads managed to queue their id
   testOK &= queue->size() == nblocks.x * nthreads.x;
   // Launch a kernel top collect queued data
-  popAndAdd<<<nblocks, nthreads>>>(queue, sum);
+  COPCORE_KERNEL(nblocks.x, nthreads.x, popAndAdd, queue, sum);
   // Wait work to finish and memory to reach the host
   cudaDeviceSynchronize();
   // Check if all data was dequeued

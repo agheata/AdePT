@@ -32,7 +32,7 @@ int main(void)
   cudaMemcpy(r_dev, &r, sizeof(RanluxppDouble), cudaMemcpyHostToDevice);
   cudaDeviceSynchronize();
 
-  kernel<<<1, 1>>>(r_dev, d_dev_ptr, i_dev_ptr, d2_dev_ptr);
+  COPCORE_KERNEL(1, 1, kernel, r_dev, d_dev_ptr, i_dev_ptr, d2_dev_ptr);
   cudaDeviceSynchronize();
 
   // Generate from the same state on the host.

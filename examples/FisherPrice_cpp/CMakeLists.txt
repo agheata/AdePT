@@ -3,3 +3,4 @@
 
 # Noddy example 1 of particle processing on CPU
 add_executable(fisher_price fisher_price.cpp)
+target_link_libraries(fisher_price CopCore::CopCore_CPU)

@@ -17,13 +17,19 @@ dim3::dim3(const unsigned int &x, const unsigned int &y, const unsigned int &z) 
 
 cudaError_t cudaMalloc(void **devPtr, size_t size)
 {
-  posix_memalign(devPtr, 64, size);
+  auto err = posix_memalign(devPtr, 64, size);
+  return 0;
+}
+
+cudaError_t cudaMallocManaged(void **devPtr, size_t size)
+{
+  auto err = posix_memalign(devPtr, 64, size);
   return 0;
 }
 
 cudaError_t cudaMallocHost(void **ptr, size_t size)
 {
-  posix_memalign(ptr, 64, size);
+  auto err = posix_memalign(ptr, 64, size);
   return 0;
 }
 
@@ -89,6 +95,11 @@ cudaError_t cudaFree(void *ptr)
 }
 
 cudaError_t cudaDeviceReset()
+{
+  return 0;
+}
+
+cudaError_t cudaDeviceSynchronize()
 {
   return 0;
 }
