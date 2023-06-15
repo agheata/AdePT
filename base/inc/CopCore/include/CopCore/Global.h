@@ -55,7 +55,10 @@ static inline void error_check(cudaError_t err, const char *file, int line)
 
 /** @brief Get number of SMs on the current device */
 #ifndef COPCORE_CUDA_COMPILER
-static inline int get_num_SMs() { return 0; }
+static inline int get_num_SMs()
+{
+  return 0;
+}
 #else
 static inline int get_num_SMs()
 {
@@ -63,6 +66,42 @@ static inline int get_num_SMs()
   COPCORE_CUDA_CHECK(cudaGetDevice(&deviceId));
   COPCORE_CUDA_CHECK(cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, deviceId));
   return numSMs;
+}
+#endif
+
+/** @brief Backend-dependent custom heap and stack device limits */
+template <BackendType T>
+inline void DeviceSetStackLimit(size_t)
+{
+}
+
+template <BackendType T>
+inline void DeviceGetStackLimit(size_t *)
+{
+}
+
+template <BackendType T>
+inline void DeviceSetHeapLimit(size_t)
+{
+}
+
+#ifdef __CUDA_RUNTIME_H__
+template <>
+inline void DeviceSetStackLimit<BackendType::CUDA>(size_t size)
+{
+  COPCORE_CUDA_CHECK(cudaDeviceSetLimit(cudaLimitStackSize, size));
+}
+
+template <>
+inline void DeviceGetStackLimit<BackendType::CUDA>(size_t *size)
+{
+  COPCORE_CUDA_CHECK(cudaDeviceGetLimit(size, cudaLimitStackSize));
+}
+
+template <>
+inline void DeviceSetHeapLimit<BackendType::CUDA>(size_t size)
+{
+  COPCORE_CUDA_CHECK(cudaDeviceSetLimit(cudaLimitMallocHeapSize, size));
 }
 #endif
 
