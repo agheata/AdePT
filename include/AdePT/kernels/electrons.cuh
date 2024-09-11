@@ -313,10 +313,11 @@ static __device__ __forceinline__ void TransportElectrons(adept::TrackManager<Tr
       // Kill the particle if it left the world.
       if (!nextState.IsOutside()) {
 #ifdef ADEPT_USE_SURF
-        AdePTNavigator::RelocateToNextVolume(pos, dir, hitsurf_index, nextState); 
+        AdePTNavigator::RelocateToNextVolume(pos, dir, hitsurf_index, nextState);
 #else
         AdePTNavigator::RelocateToNextVolume(pos, dir, nextState);
 #endif
+        if (nextState.IsOutside()) continue;
         // Move to the next boundary.
         navState = nextState;
         // Check if the next volume belongs to the GPU region and push it to the appropriate queue

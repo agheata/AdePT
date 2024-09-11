@@ -134,6 +134,7 @@ __global__ void TransportGammas(adept::TrackManager<Track> *gammas, Secondaries 
 #else
         AdePTNavigator::RelocateToNextVolume(pos, dir, nextState);
 #endif
+        if (nextState.IsOutside()) continue;
         // Move to the next boundary.
         navState = nextState;
         //printf("  -> pvol=%d pos={%g, %g, %g} \n", navState.TopId(), pos[0], pos[1], pos[2]);
