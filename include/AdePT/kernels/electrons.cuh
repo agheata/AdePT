@@ -314,10 +314,10 @@ static __device__ __forceinline__ void TransportElectrons(adept::TrackManager<Tr
       if (!nextState.IsOutside()) {
 #ifdef ADEPT_USE_SURF
         AdePTNavigator::RelocateToNextVolume(pos, dir, hitsurf_index, nextState);
+        if (nextState.IsOutside()) continue;
 #else
         AdePTNavigator::RelocateToNextVolume(pos, dir, nextState);
 #endif
-        if (nextState.IsOutside()) continue;
         // Move to the next boundary.
         navState = nextState;
         // Check if the next volume belongs to the GPU region and push it to the appropriate queue

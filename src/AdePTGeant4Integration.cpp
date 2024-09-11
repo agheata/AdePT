@@ -34,7 +34,6 @@ void AdePTGeant4Integration::CreateVecGeomWorld(std::string filename)
 {
   // Import the gdml file into VecGeom
   vecgeom::GeoManager::Instance().SetTransformationCacheDepth(0);
-  vecgeom::GeoManager::Instance().SetMinPerScene(1);
   vgdml::Parser vgdmlParser;
   auto middleWare = vgdmlParser.Load(filename, false, mm);
   if (middleWare == nullptr) {
