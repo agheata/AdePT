@@ -278,17 +278,20 @@ void AdePTGeant4Integration::ProcessGPUHits(HostScoring &aScoring, HostScoring::
   // Reconstruct G4NavigationHistory and G4Step, and call the SD code for each hit
   for (size_t i = aStats.fBufferStart; i < aStats.fBufferStart + aStats.fUsedSlots; i++) {
     // Get Hit index (Circular buffer)
-    int aHitIdx = i % aScoring.fBufferCapacity;
-
-    vecgeom::NavigationState &aNavState = aScoring.fGPUHitsBuffer_host[aHitIdx].fPreStepPoint.fNavigationState;
+    int aHitIdx                           = i % aScoring.fBufferCapacity;
+    vecgeom::NavigationState &preNavState = aScoring.fGPUHitsBuffer_host[aHitIdx].fPreStepPoint.fNavigationState;
     // Reconstruct Pre-Step point G4NavigationHistory
-    FillG4NavigationHistory(aNavState, fPreG4NavigationHistory);
+    FillG4NavigationHistory(preNavState, fPreG4NavigationHistory);
     ((G4TouchableHistory *)fPreG4TouchableHistoryHandle())
         ->UpdateYourself(fPreG4NavigationHistory->GetTopVolume(), fPreG4NavigationHistory);
     // Reconstruct Post-Step point G4NavigationHistory
-    FillG4NavigationHistory(aNavState, fPostG4NavigationHistory);
-    ((G4TouchableHistory *)fPostG4TouchableHistoryHandle())
-        ->UpdateYourself(fPostG4NavigationHistory->GetTopVolume(), fPostG4NavigationHistory);
+    vecgeom::NavigationState &postNavState = aScoring.fGPUHitsBuffer_host[aHitIdx].fPostStepPoint.fNavigationState;
+    if (!postNavState
+             .IsOutside()) { // if it is outside, don't set anything and check for nullptr GetVolume in FillG4Step
+      FillG4NavigationHistory(postNavState, fPostG4NavigationHistory);
+      ((G4TouchableHistory *)fPostG4TouchableHistoryHandle())
+          ->UpdateYourself(fPostG4NavigationHistory->GetTopVolume(), fPostG4NavigationHistory);
+    }
 
     // Reconstruct G4Step
     switch (aScoring.fGPUHitsBuffer_host[aHitIdx].fParticleType) {
@@ -317,7 +320,8 @@ void AdePTGeant4Integration::ProcessGPUHits(HostScoring &aScoring, HostScoring::
   }
 }
 
-void AdePTGeant4Integration::FillG4NavigationHistory(vecgeom::NavigationState aNavState, G4NavigationHistory *aG4NavigationHistory)
+void AdePTGeant4Integration::FillG4NavigationHistory(vecgeom::NavigationState aNavState,
+                                                     G4NavigationHistory *aG4NavigationHistory)
 {
   // Get the current depth of the history (corresponding to the previous reconstructed touchable)
   auto aG4HistoryDepth = aG4NavigationHistory->GetDepth();
@@ -351,13 +355,10 @@ void AdePTGeant4Integration::FillG4NavigationHistory(vecgeom::NavigationState aN
       aG4HistoryDepth = aLevel;
     } else {
       // If the navigation state is deeper than the current history we need to add the new levels
-      if(aLevel)
-      { 
+      if (aLevel) {
         aG4NavigationHistory->NewLevel(pnewvol, kNormal, pnewvol->GetCopyNo());
         aG4HistoryDepth++;
-      }
-      else
-      {
+      } else {
         aG4NavigationHistory->SetFirstEntry(pnewvol);
       }
     }
@@ -369,15 +370,15 @@ void AdePTGeant4Integration::FillG4NavigationHistory(vecgeom::NavigationState aN
 void AdePTGeant4Integration::FillG4Step(GPUHit *aGPUHit, G4Step *aG4Step, G4TouchableHandle &aPreG4TouchableHandle,
                                         G4TouchableHandle &aPostG4TouchableHandle)
 {
-  const G4ThreeVector *aPostStepPointMomentumDirection = new G4ThreeVector(aGPUHit->fPostStepPoint.fMomentumDirection.x(),
-                                                                           aGPUHit->fPostStepPoint.fMomentumDirection.y(),
-                                                                           aGPUHit->fPostStepPoint.fMomentumDirection.z());
-  const G4ThreeVector *aPostStepPointPolarization      = new G4ThreeVector(aGPUHit->fPostStepPoint.fPolarization.x(),
-                                                                           aGPUHit->fPostStepPoint.fPolarization.y(),
-                                                                           aGPUHit->fPostStepPoint.fPolarization.z());
-  const G4ThreeVector *aPostStepPointPosition          = new G4ThreeVector(aGPUHit->fPostStepPoint.fPosition.x(),
-                                                                           aGPUHit->fPostStepPoint.fPosition.y(),
-                                                                           aGPUHit->fPostStepPoint.fPosition.z());
+  const G4ThreeVector *aPostStepPointMomentumDirection =
+      new G4ThreeVector(aGPUHit->fPostStepPoint.fMomentumDirection.x(), aGPUHit->fPostStepPoint.fMomentumDirection.y(),
+                        aGPUHit->fPostStepPoint.fMomentumDirection.z());
+  const G4ThreeVector *aPostStepPointPolarization =
+      new G4ThreeVector(aGPUHit->fPostStepPoint.fPolarization.x(), aGPUHit->fPostStepPoint.fPolarization.y(),
+                        aGPUHit->fPostStepPoint.fPolarization.z());
+  const G4ThreeVector *aPostStepPointPosition =
+      new G4ThreeVector(aGPUHit->fPostStepPoint.fPosition.x(), aGPUHit->fPostStepPoint.fPosition.y(),
+                        aGPUHit->fPostStepPoint.fPosition.z());
 
   // G4Step
   aG4Step->SetStepLength(aGPUHit->fStepLength);                 // Real data
@@ -392,7 +393,7 @@ void AdePTGeant4Integration::FillG4Step(GPUHit *aGPUHit, G4Step *aG4Step, G4Touc
   // G4Track
   G4Track *aTrack = aG4Step->GetTrack();
   // aTrack->SetTrackID(0);                                                                   // Missing data
-  aTrack->SetParentID(aGPUHit->fParentID); // ID of the initial particle that entered AdePT
+  aTrack->SetParentID(aGPUHit->fParentID);      // ID of the initial particle that entered AdePT
   aTrack->SetPosition(*aPostStepPointPosition); // Real data
   // aTrack->SetGlobalTime(0);                                                                // Missing data
   // aTrack->SetLocalTime(0);                                                                 // Missing data
@@ -452,9 +453,13 @@ void AdePTGeant4Integration::FillG4Step(GPUHit *aGPUHit, G4Step *aG4Step, G4Touc
   aPostStepPoint->SetMomentumDirection(*aPostStepPointMomentumDirection); // Real data
   aPostStepPoint->SetKineticEnergy(aGPUHit->fPostStepPoint.fEKin);        // Real data
   // aPostStepPoint->SetVelocity(0);                                                                  // Missing data
-  aPostStepPoint->SetTouchableHandle(aPostG4TouchableHandle);                                          // Real data
-  aPostStepPoint->SetMaterial(aPostG4TouchableHandle->GetVolume()->GetLogicalVolume()->GetMaterial()); // Real data
-  aPostStepPoint->SetMaterialCutsCouple(aPostG4TouchableHandle->GetVolume()->GetLogicalVolume()->GetMaterialCutsCouple());
+  if (fPostG4TouchableHistoryHandle->GetVolume()) { // protect against nullptr if postNavState is outside
+    aPostStepPoint->SetTouchableHandle(fPostG4TouchableHistoryHandle); // Real data
+    aPostStepPoint->SetMaterial(
+        fPostG4TouchableHistoryHandle->GetVolume()->GetLogicalVolume()->GetMaterial()); // Real data
+    aPostStepPoint->SetMaterialCutsCouple(
+        fPostG4TouchableHistoryHandle->GetVolume()->GetLogicalVolume()->GetMaterialCutsCouple());
+  }
   // aPostStepPoint->SetSensitiveDetector(nullptr);                                                   // Missing data
   // aPostStepPoint->SetSafety(0);                                                                    // Missing data
   aPostStepPoint->SetPolarization(*aPostStepPointPolarization); // Real data
