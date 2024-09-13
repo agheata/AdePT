@@ -208,7 +208,7 @@ void AdePTGeant4Integration::InitScoringData(adeptint::VolAuxData *volAuxData)
     const auto g4_lvol = g4_pvol->GetLogicalVolume();
     const auto vg_lvol = vg_pvol->GetLogicalVolume();
 
-    // Initialize mapping of Vecgeom sensitive PlacedVolume IDs to G4 PhysicalVolume IDs
+    // Initialize mapping of Vecgeom PlacedVolume IDs to G4 PhysicalVolume IDs
     // Though we only record and reconstruct hits for sensitive volumes, this map needs to store every
     // volume in the geometry, as a step may begin in a sensitive volume and end in a non-sensitive one
     fglobal_vecgeom_to_g4_map.insert(std::pair<int, const G4VPhysicalVolume *>(vg_pvol->id(), g4_pvol));
