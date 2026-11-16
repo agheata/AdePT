@@ -76,7 +76,7 @@ public:
     std::vector<std::pair<std::string, int>> exited, expected, located;
   };
 
-  /// @param outputPrefix Prefix of <prefix>_handoff.json (empty: no file).
+  /// @param outputPrefix Prefix of `<prefix>_handoff.json` (empty: no file).
   /// @param recordCapacity Maximum number of records kept.
   HandoffValidator(std::string const &outputPrefix, unsigned int recordCapacity);
   ~HandoffValidator();
