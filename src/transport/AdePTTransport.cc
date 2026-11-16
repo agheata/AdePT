@@ -123,8 +123,7 @@ AdePTTransport::AdePTTransport(const AdePTTransportConfig &configuration,
       fKernelOptions{NormalizeKernelOptions(configuration.kernelOptions)}, fBfieldFile{configuration.bfieldFile},
       fCPUCapacityFactor{configuration.cpuCapacityFactor}, fCPUCopyFraction{configuration.cpuCopyFraction},
       fStepBufferSafetyFactor{configuration.stepBufferSafetyFactor},
-      fSteppingActionParams{configuration.steppingActionParams},
-      fValidateCrossings{configuration.validateCrossings},
+      fSteppingActionParams{configuration.steppingActionParams}, fValidateCrossings{configuration.validateCrossings},
       fValidationRecordCapacity{configuration.validationRecordCapacity},
       fValidationOutput{configuration.validationOutput}
 {
